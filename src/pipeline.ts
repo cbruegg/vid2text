@@ -216,9 +216,9 @@ async function summarizeResult(
 
 function buildArtifacts(resultBaseName: string, outDir: string, options: CliOptions): Artifacts {
   return {
-    json: options.json ? path.join(outDir, `${resultBaseName}.json`) : undefined,
-    text: options.text ? path.join(outDir, `${resultBaseName}.txt`) : undefined,
-    summary: options.summary ? path.join(outDir, `${resultBaseName}.summary.txt`) : undefined
+    json: options.outputJson ? path.join(outDir, `${resultBaseName}.json`) : undefined,
+    text: options.outputText ? path.join(outDir, `${resultBaseName}.txt`) : undefined,
+    summary: options.outputSummary ? path.join(outDir, `${resultBaseName}.summary.txt`) : undefined
   };
 }
 
@@ -259,7 +259,7 @@ export async function runPipeline(input: string, options: CliOptions): Promise<{
     }, videoText) : undefined;
 
     let summary: SummaryResult | undefined;
-    if (options.summary) {
+    if (options.outputSummary) {
       summary = await summarizeResult(client, options.summaryModel, {
         source,
         audio: {
@@ -286,10 +286,10 @@ export async function runPipeline(input: string, options: CliOptions): Promise<{
       source,
       options: {
         videoText: options.videoText,
-        summary: options.summary,
+        outputSummary: options.outputSummary,
         audioModel: options.audioModel,
         visionModel: options.videoText ? options.visionModel : undefined,
-        summaryModel: options.summary ? options.summaryModel : undefined,
+        summaryModel: options.outputSummary ? options.summaryModel : undefined,
         fps: options.videoText ? options.fps : undefined
       },
       audio: {

@@ -2,9 +2,9 @@ export type StdoutTarget = "json" | "text" | "summary";
 
 export interface CliOptions {
   videoText: boolean;
-  summary: boolean;
-  json: boolean;
-  text: boolean;
+  outputSummary: boolean;
+  outputJson: boolean;
+  outputText: boolean;
   stdout?: StdoutTarget;
   outDir: string;
   audioModel: string;
@@ -64,7 +64,7 @@ export interface PipelineResult {
   source: SourceInfo;
   options: {
     videoText: boolean;
-    summary: boolean;
+    outputSummary: boolean;
     audioModel: string;
     visionModel?: string;
     summaryModel?: string;

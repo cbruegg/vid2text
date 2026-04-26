@@ -15,7 +15,39 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/reusable-build.yml
-    with:
-      publish_release: true
-      release_tag: rolling
-      release_name: Latest
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vid2text-binaries
+          path: dist/bin
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="rolling"
+          NAME="Latest"
+
+          # Create or update the tag
+          git tag -f "$TAG"
+          git push -f origin "$TAG"
+
+          # Create release if it doesn't exist
+          if ! gh release view "$TAG" &>/dev/null; then
+            gh release create "$TAG" \
+              --title "$NAME" \
+              --notes "Rolling release" \
+              --latest
+          fi
+
+          # Upload assets with clobber
+          for file in dist/bin/*; do
+            gh release upload "$TAG" "$file" --clobber
+          done
