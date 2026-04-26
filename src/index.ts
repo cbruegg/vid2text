@@ -6,6 +6,13 @@ import { UserError } from "./errors.js";
 import { runPipeline } from "./pipeline.js";
 import type { CliOptions, StdoutTarget } from "./types.js";
 
+function parseYesNo(value: string): boolean {
+  const lower = value.trim().toLowerCase();
+  if (lower === "yes" || lower === "true" || lower === "1") return true;
+  if (lower === "no" || lower === "false" || lower === "0") return false;
+  throw new UserError(`Invalid yes/no value: ${value}. Use yes or no.`);
+}
+
 function buildProgram(): Command {
   const program = new Command();
 
@@ -14,11 +21,9 @@ function buildProgram(): Command {
     .argument("<input>", "Public Reel URL or local media file path")
     .description("Transcribe spoken audio from Reels or local video files, with optional frame OCR and summary generation.")
     .option("--video-text", "Extract readable on-screen text from sampled frames", false)
-    .option("--summary", "Generate a concise summary after transcription", false)
-    .option("--json", "Write JSON output", true)
-    .option("--no-json", "Skip writing JSON output")
-    .option("--text", "Write readable transcript text", true)
-    .option("--no-text", "Skip writing transcript text")
+    .option("--output-json <yes|no>", "Write JSON output", parseYesNo, true)
+    .option("--output-text <yes|no>", "Write readable transcript text", parseYesNo, true)
+    .option("--output-summary <yes|no>", "Generate and write summary", parseYesNo, false)
     .option("--stdout <target>", "Print one artifact to stdout: json, text, or summary")
     .option("--out-dir <dir>", "Directory for output artifacts", path.resolve(process.cwd(), "output"))
     .option("--audio-model <model>", "Speech-to-text model", "gpt-4o-mini-transcribe")
@@ -44,19 +49,19 @@ function normalizeOptions(raw: Record<string, unknown>): CliOptions {
     throw new UserError(`Invalid --stdout target: ${stdout}`);
   }
 
-  if (stdout === "summary" && !raw.summary) {
-    throw new UserError("--stdout summary requires --summary.");
+  if (stdout === "summary" && !raw.outputSummary) {
+    throw new UserError("--stdout summary requires --output-summary yes.");
   }
 
-  if (!raw.json && !raw.text && !stdout) {
-    throw new UserError("No output selected. Enable --json, --text, or --stdout.");
+  if (!raw.outputJson && !raw.outputText && !stdout) {
+    throw new UserError("No output selected. Enable --output-json, --output-text, or --stdout.");
   }
 
   return {
     videoText: Boolean(raw.videoText),
-    summary: Boolean(raw.summary),
-    json: Boolean(raw.json),
-    text: Boolean(raw.text),
+    outputSummary: Boolean(raw.outputSummary),
+    outputJson: Boolean(raw.outputJson),
+    outputText: Boolean(raw.outputText),
     stdout,
     outDir: path.resolve(String(raw.outDir)),
     audioModel: String(raw.audioModel),

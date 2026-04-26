@@ -55,15 +55,15 @@ Basic local file transcription:
 Enable frame OCR and summary generation:
 
 ```bash
-./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --video-text --summary
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --video-text --output-summary yes
 ```
 
 Print one artifact to stdout instead of just writing files:
 
 ```bash
-./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout text --no-text
-./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout json --no-json
-./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --summary --stdout summary
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout text --output-text no
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout json --output-json no
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --output-summary yes --stdout summary
 ```
 
 Write artifacts to a custom directory:
@@ -79,7 +79,7 @@ By default the CLI writes:
 - `<basename>.json`
 - `<basename>.txt`
 
-If `--summary` is enabled, it also writes:
+If `--output-summary yes` is used, it also writes:
 
 - `<basename>.summary.txt`
 
@@ -92,17 +92,17 @@ Default output directory:
 ## Options
 
 ```text
---video-text             Extract readable on-screen text from sampled frames
---summary                Generate a concise summary after transcription
---json / --no-json       Enable or disable JSON artifact output
---text / --no-text       Enable or disable text artifact output
---stdout <target>        Print one artifact: json, text, or summary
---out-dir <dir>          Directory for output artifacts
---audio-model <model>    Speech-to-text model, default: gpt-4o-mini-transcribe
---vision-model <model>   Vision model for OCR, default: gpt-4.1-mini
---summary-model <model>  Model for summary, default: gpt-4.1-mini
---fps <fps>              Frame sampling rate for OCR, default: 1
---keep-temp              Keep intermediate temp files
+--video-text                   Extract readable on-screen text from sampled frames
+--output-json <yes|no>         Enable or disable JSON artifact output (default: yes)
+--output-text <yes|no>         Enable or disable text artifact output (default: yes)
+--output-summary <yes|no>      Generate and write summary output (default: no)
+--stdout <target>              Print one artifact to stdout: json, text, or summary
+--out-dir <dir>                Directory for output artifacts
+--audio-model <model>          Speech-to-text model, default: gpt-4o-mini-transcribe
+--vision-model <model>         Vision model for OCR, default: gpt-4.1-mini
+--summary-model <model>        Model for summary, default: gpt-4.1-mini
+--fps <fps>                    Frame sampling rate for OCR, default: 1
+--keep-temp                    Keep intermediate temp files
 ```
 
 ## Notes
