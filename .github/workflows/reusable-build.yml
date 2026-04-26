@@ -37,35 +37,7 @@ jobs:
 
   build:
     needs: verify
-    strategy:
-      matrix:
-        target:
-          - bun-darwin-x64
-          - bun-darwin-arm64
-          - bun-linux-x64
-          - bun-linux-arm64
-          - bun-linux-x64-musl
-          - bun-linux-arm64-musl
-          - bun-windows-x64
-          - bun-windows-arm64
-        include:
-          - target: bun-darwin-x64
-            runner: macos-latest
-          - target: bun-darwin-arm64
-            runner: macos-latest
-          - target: bun-linux-x64
-            runner: ubuntu-latest
-          - target: bun-linux-arm64
-            runner: ubuntu-latest
-          - target: bun-linux-x64-musl
-            runner: ubuntu-latest
-          - target: bun-linux-arm64-musl
-            runner: ubuntu-latest
-          - target: bun-windows-x64
-            runner: windows-latest
-          - target: bun-windows-arm64
-            runner: windows-latest
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -76,16 +48,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build binary
-        run: bun run scripts/build-executable.ts
-        env:
-          TARGET: ${{ matrix.target }}
-          OUTDIR: ./dist/bin
+      - name: Build all binaries
+        run: bun run scripts/build-release.ts
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vid2text-${{ matrix.target }}
+          name: vid2text-binaries
           path: dist/bin/*
 
   publish:
@@ -97,12 +66,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
+          name: vid2text-binaries
           path: dist/bin
-          pattern: vid2text-*
-          merge-multiple: true
 
       - name: Create or update release
         env:

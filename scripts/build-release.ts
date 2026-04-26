@@ -14,26 +14,18 @@ const targets = [
 
 for (const target of targets) {
   console.log(`Building ${target}...`);
-  const name = `vid2text-${target}${target.includes("windows") ? ".exe" : ""}`;
 
-  const result = await Bun.build({
-    entrypoints: ["./src/index.ts"],
-    compile: {
-      target: target as any,
-      outfile: `${outdir}/${name}`,
-    },
-    minify: true,
+  const proc = Bun.spawn({
+    cmd: ["bun", "run", "scripts/build-executable.ts", "--target", target, "--outdir", outdir],
+    stdout: "inherit",
+    stderr: "inherit",
   });
 
-  if (!result.success) {
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
     console.error(`Build failed for ${target}`);
-    for (const log of result.logs) {
-      console.error(log);
-    }
-    process.exit(1);
+    process.exit(exitCode);
   }
-
-  console.log(`Built: ${result.outputs[0]!.path}`);
 }
 
 console.log("All builds completed");
