@@ -12,7 +12,8 @@ import type { Artifacts, AudioChunkResult, CliOptions, PipelineResult, SourceInf
 
 async function ensureCommand(command: string, helpText: string): Promise<void> {
   try {
-    await execa("which", [command]);
+    const shell = process.platform === "win32" ? `where ${command}` : `command -v ${command}`;
+    await execa(shell, { shell: true });
   } catch {
     throw new UserError(`${command} is required but was not found on PATH. ${helpText}`);
   }
@@ -48,7 +49,7 @@ async function resolveInput(input: string, workDir: string): Promise<{ kind: "ur
   candidates.sort();
   return {
     kind: "url",
-    path: candidates[candidates.length - 1]
+    path: candidates[candidates.length - 1]!
   };
 }
 
@@ -81,7 +82,7 @@ async function transcribeAudio(
   let language: string | undefined;
 
   for (let index = 0; index < segments.length; index += 1) {
-    const segment = segments[index];
+    const segment = segments[index]!;
     const upload = await toFile(await readFile(segment.path), path.basename(segment.path));
     const transcript = await client.audio.transcriptions.create({
       file: upload,
@@ -132,7 +133,7 @@ async function extractVideoText(
   const spans: VideoTextSpan[] = [];
 
   for (let index = 0; index < framePaths.length; index += 1) {
-    const framePath = framePaths[index];
+    const framePath = framePaths[index]!;
     const buffer = await readFile(framePath);
     const base64 = buffer.toString("base64");
     const response = await client.responses.create({
