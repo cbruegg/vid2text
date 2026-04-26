@@ -4,7 +4,7 @@ Local TypeScript CLI for transcribing spoken audio from public Instagram Reels o
 
 ## Requirements
 
-- Node.js 20+
+- Bun 1.3.13+
 - `ffmpeg` and `ffprobe` on `PATH`
 - `yt-dlp` on `PATH` for Reel URL input
 - `OPENAI_API_KEY` set in the environment
@@ -12,22 +12,29 @@ Local TypeScript CLI for transcribing spoken audio from public Instagram Reels o
 ## Install
 
 ```bash
-npm install
+bun install
 ```
 
-## Build
+## Development
 
 ```bash
-npm run build
+bun start --help
+bun run check
+bun test
 ```
 
-The compiled CLI entrypoint is `dist/src/index.js`.
+## Build Release Binaries
 
-## Development Checks
+Build for the current platform:
 
 ```bash
-npm run check
-npm test
+bun run build:bin
+```
+
+Build all release targets:
+
+```bash
+bun run build:release
 ```
 
 ## Usage
@@ -36,33 +43,33 @@ Basic Reel transcription:
 
 ```bash
 export OPENAI_API_KEY=your_key_here
-node dist/src/index.js "https://www.instagram.com/reel/REEL_ID/"
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/"
 ```
 
 Basic local file transcription:
 
 ```bash
-node dist/src/index.js ./my-video.mp4
+./dist/bin/vid2text-bun-darwin-arm64 ./my-video.mp4
 ```
 
 Enable frame OCR and summary generation:
 
 ```bash
-node dist/src/index.js "https://www.instagram.com/reel/REEL_ID/" --video-text --summary
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --video-text --summary
 ```
 
 Print one artifact to stdout instead of just writing files:
 
 ```bash
-node dist/src/index.js "https://www.instagram.com/reel/REEL_ID/" --stdout text --no-text
-node dist/src/index.js "https://www.instagram.com/reel/REEL_ID/" --stdout json --no-json
-node dist/src/index.js "https://www.instagram.com/reel/REEL_ID/" --summary --stdout summary
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout text --no-text
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --stdout json --no-json
+./dist/bin/vid2text-bun-darwin-arm64 "https://www.instagram.com/reel/REEL_ID/" --summary --stdout summary
 ```
 
 Write artifacts to a custom directory:
 
 ```bash
-node dist/src/index.js ./my-video.mp4 --out-dir ./tmp-output
+./dist/bin/vid2text-bun-darwin-arm64 ./my-video.mp4 --out-dir ./tmp-output
 ```
 
 ## Output

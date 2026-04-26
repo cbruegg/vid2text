@@ -72,6 +72,9 @@ async function main(): Promise<void> {
   program.parse(process.argv);
 
   const input = program.args[0];
+  if (!input) {
+    throw new UserError("Input is required.");
+  }
   const options = normalizeOptions(program.opts<Record<string, unknown>>());
   const { stdout } = await runPipeline(input, options);
 
