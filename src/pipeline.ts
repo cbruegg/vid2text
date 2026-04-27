@@ -1,6 +1,7 @@
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import { execa } from "execa";
 import OpenAI, { toFile } from "openai";
 import { ZodError } from "zod";
@@ -9,6 +10,10 @@ import { isUrl } from "./input.js";
 import { extractAudio, extractFrames, getMediaDurationSec, splitAudioIfNeeded } from "./media.js";
 import { buildMergedTimeline, dedupeVideoTextSpans, parseOcrJson, parseSummaryJson, renderSummaryText, renderTextTranscript } from "./text.js";
 import type { Artifacts, AudioChunkResult, CliOptions, PipelineResult, SourceInfo, SummaryResult, VideoTextSpan } from "./types.js";
+
+function log(message: string): void {
+  process.stderr.write(`${message}\n`);
+}
 
 async function ensureCommand(command: string, helpText: string): Promise<void> {
   try {
@@ -26,10 +31,12 @@ async function resolveInput(input: string, workDir: string): Promise<{ kind: "ur
     if (!fileInfo?.isFile()) {
       throw new UserError(`Input file does not exist: ${sourcePath}`);
     }
+    log(`Using local file: ${sourcePath}`);
     return { kind: "file", path: sourcePath };
   }
 
   await ensureCommand("yt-dlp", "Install yt-dlp to download public Reel URLs.");
+  log(`Downloading media from URL: ${input}`);
 
   const downloadsDir = path.join(workDir, "downloads");
   await mkdir(downloadsDir, { recursive: true });
@@ -47,9 +54,11 @@ async function resolveInput(input: string, workDir: string): Promise<{ kind: "ur
   }
 
   candidates.sort();
+  const downloadedPath = candidates[candidates.length - 1]!;
+  log(`Downloaded to: ${downloadedPath}`);
   return {
     kind: "url",
-    path: candidates[candidates.length - 1]!
+    path: downloadedPath
   };
 }
 
@@ -76,6 +85,7 @@ async function transcribeAudio(
   const segments = await splitAudioIfNeeded(audioPath, tempDir);
   if (segments.length > 1) {
     warnings.push("Audio exceeded 25 MB after compression and was transcribed in chunks.");
+    log(`Audio split into ${segments.length} chunks for transcription.`);
   }
 
   const chunks: AudioChunkResult[] = [];
@@ -83,6 +93,7 @@ async function transcribeAudio(
 
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index]!;
+    log(`Transcribing audio chunk ${index + 1}/${segments.length}...`);
     const upload = await toFile(await readFile(segment.path), path.basename(segment.path));
     const transcript = await client.audio.transcriptions.create({
       file: upload,
@@ -111,6 +122,8 @@ async function transcribeAudio(
     });
   }
 
+  log(`Audio transcription complete (${chunks.length} chunk${chunks.length === 1 ? "" : "s"}).`);
+
   return {
     text: chunks.map((chunk) => chunk.text).filter(Boolean).join("\n\n").trim(),
     language,
@@ -127,13 +140,16 @@ async function extractVideoText(
   tempDir: string
 ): Promise<{ spans: VideoTextSpan[]; warnings: string[] }> {
   const framesDir = path.join(tempDir, "frames");
+  log(`Extracting frames at ${fps} FPS for OCR...`);
   const framePaths = await extractFrames(inputPath, fps, framesDir);
+  log(`Extracted ${framePaths.length} frames. Running OCR...`);
   const frameDurationSec = 1 / fps;
   const warnings: string[] = [];
   const spans: VideoTextSpan[] = [];
 
   for (let index = 0; index < framePaths.length; index += 1) {
     const framePath = framePaths[index]!;
+    log(`OCR on frame ${index + 1}/${framePaths.length}...`);
     const buffer = await readFile(framePath);
     const base64 = buffer.toString("base64");
     const response = await client.responses.create({
@@ -187,6 +203,8 @@ async function extractVideoText(
     warnings.push("Video OCR was enabled but no readable on-screen text was extracted.");
   }
 
+  log(`OCR complete (${deduped.length} unique text span${deduped.length === 1 ? "" : "s"}).`);
+
   return { spans: deduped, warnings };
 }
 
@@ -195,6 +213,7 @@ async function summarizeResult(
   model: string,
   payload: Record<string, unknown>
 ): Promise<SummaryResult> {
+  log("Generating summary...");
   const response = await client.responses.create({
     model,
     input: [{
@@ -211,7 +230,9 @@ async function summarizeResult(
     }]
   } as never);
 
-  return parseSummaryJson(response.output_text ?? "{\"summary\":\"\",\"keyPoints\":[]}");
+  const result = parseSummaryJson(response.output_text ?? "{\"summary\":\"\",\"keyPoints\":[]}");
+  log("Summary generation complete.");
+  return result;
 }
 
 function buildArtifacts(resultBaseName: string, outDir: string, options: CliOptions): Artifacts {
@@ -232,9 +253,14 @@ export async function runPipeline(input: string, options: CliOptions): Promise<{
 
   try {
     const resolved = await resolveInput(input, tempDir);
+    log(`Reading media duration...`);
     const durationSec = await getMediaDurationSec(resolved.path);
+    log(`Duration: ${durationSec.toFixed(2)}s`);
+
     const audioPath = path.join(tempDir, "audio", "input.mp3");
+    log("Extracting audio...");
     await extractAudio(resolved.path, audioPath);
+    log("Audio extracted.");
 
     const audioResult = await transcribeAudio(client, audioPath, options.audioModel, tempDir);
     const warnings = [...audioResult.warnings];
@@ -305,14 +331,17 @@ export async function runPipeline(input: string, options: CliOptions): Promise<{
     };
 
     if (artifacts.json) {
+      log(`Writing JSON: ${artifacts.json}`);
       await writeFile(artifacts.json, `${JSON.stringify(result, null, 2)}\n`, "utf8");
     }
 
     if (artifacts.text) {
+      log(`Writing transcript: ${artifacts.text}`);
       await writeFile(artifacts.text, renderTextTranscript(result.audio, result.videoText), "utf8");
     }
 
     if (artifacts.summary && result.summary) {
+      log(`Writing summary: ${artifacts.summary}`);
       await writeFile(artifacts.summary, renderSummaryText(result.summary), "utf8");
     }
 
@@ -325,6 +354,7 @@ export async function runPipeline(input: string, options: CliOptions): Promise<{
       stdout = result.summary ? renderSummaryText(result.summary) : "";
     }
 
+    log("Done.");
     return { result, stdout };
   } finally {
     if (!options.keepTemp) {
